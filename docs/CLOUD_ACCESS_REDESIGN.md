@@ -20,10 +20,11 @@ The current cloud-access layer grew organically and is confusing and leaky:
    `guardian/openrouter/openai/gpt-4o`, `guardian/openai/gpt-4o`).
 3. **The cloud model name is inconsistent** across providers: openrouter/nvidia
    store their models with the brand segment (`openai/gpt-4o`,
-   `minimaxai/minimax-m3`) but openai/google store them without (`gpt-4o`,
-   `gemini-3.5-flash`) → `openai/gpt-4o` (2 segments) vs
+   `minimaxai/minimax-m3`) but openai/google store them without (bare `gpt-4o`,
+   bare `gemini-3.5-flash`) → `openai/gpt-4o` (2 segments) vs
    `nvidia/minimaxai/minimax-m3` (3). The `{brand}` layer should always be
-   present.
+   present — so the target format is `google/gemini-3.5-flash` /
+   `google/google/gemini-3.5-flash`, never the bare `gemini-3.5-flash`.
 4. **The credential-linking layer is not a security boundary.** A Guardian
    API key with *no* linked credential can still call any bare cloud model from
    `settings.yaml` using the global provider key (`resolve_cloud_attempts` only
@@ -106,29 +107,24 @@ New module `app/proxy/cloud_catalog.py`:
 - Provider and brand are independent and may coincide (`google/google/…`,
   `openai/openai/…`).
 
-### Backward compatibility (operator decision, revised after review)
+### Backward compatibility (operator decision)
 
-This addressing is **fully backward-compatible** — it does not break existing
-clients:
+The addressing is **backward-compatible for the bare-name clients that are
+actually in use**:
 
-- **Cloud:** the format `{provider}/{brand}/{model}` is exactly the bare name
-  clients already send today (`openrouter/deepseek/deepseek-v4-flash-0731`,
-  `nvidia/minimaxai/minimax-m3`). The change is purely *consistency*: every
-  provider now exposes the `{brand}` segment (openai/google previously omitted
-  it) and `/v1/models` deduplicates. No `guardian/` prefix is introduced or
-  required. The legacy per-key `guardian/{provider}/{model}` routes are removed
-  along with the credential layer, but the *address* clients use does not
-  change.
+- **Cloud bare names that already carry the `{brand}` segment keep working**
+  (`openrouter/deepseek/deepseek-v4-flash-0731`, `nvidia/minimaxai/minimax-m3`).
+  The `guardian/` prefix is gone and the legacy per-key `guardian/{provider}/{model}`
+  routes are removed with the credential layer, but the address these clients
+  send does not change.
+- **Google models are always written with the `google` brand.** Because google
+  becomes a first-class provider, gemini models are consistently
+  `google/gemini-3.5-flash` → `google/google/gemini-3.5-flash` (never a bare
+  `gemini-3.5-flash`).
 - **Local:** models keep their bare name (`llama3.2-3b`) — unchanged.
-- The only real behavioral deltas for clients are: (a) openai/google models get
-  a `{brand}` segment in their name, and (b) `/v1/models` stops listing
-  duplicates and the `guardian/...` aliases. A migration script lists which
-  client configs reference openai/google names.
-- **⚠️ Clients using bare openai/google names must update.** `openai/gpt-4o`
-  becomes `openai/openai/gpt-4o`; `gemini-3.5-flash` becomes
-  `google/google/gemini-3.5-flash`. Affected clients: anything calling a model
-  without the `{brand}` segment on the openai or google provider. Run the
-  migration script to find all occurrences before restart.
+
+If a client sends a name that no longer matches after the redesign, it is a
+small, obvious fix on the client side (no migration tooling needed).
 
 ## What Is Removed
 
