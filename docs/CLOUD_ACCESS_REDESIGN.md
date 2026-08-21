@@ -1,8 +1,9 @@
 # Cloud Access Redesign — One Config, One Key Source, Dynamic Catalog
 
-> Status: **PLAN** (not yet implemented). Design record + working plan for the
-> cloud-access refactor. Created 2026-08-20. This doc is the source of truth
-> for the redesign; implementation follows it. Referenced from `AGENTS.md`.
+> Status: **IMPLEMENTED** (code+config merged on `cloud-access-redesign`, awaiting
+> operator-run restart to go live). Design record + working plan for the
+> cloud-access refactor. Created 2026-08-20, implemented 2026-08-21. This doc is
+> the source of truth for the redesign. Referenced from `AGENTS.md`.
 
 ## Why
 
@@ -181,6 +182,7 @@ small, obvious fix on the client side (no migration tooling needed).
 
 ## AGENTS.md Status
 
-Active during planning. Refactor implementation is NOT started until operator
-approves this plan. Once approved, execute in the order above and then mark this
-doc `IMPLEMENTED` and update `AGENTS.md` handoff to `20260820_cloud_refactor`.
+Active during planning. Refactor implementation is complete (2026-08-21,
+commits `4329d7c` + `28e97ad` on `cloud-access-redesign`) — awaiting the
+operator-run restart to go live. `AGENTS.md` handoff updated to
+`20260820_cloud_refactor`.
