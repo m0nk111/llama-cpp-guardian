@@ -66,7 +66,7 @@ The current cloud-access layer grew organically and is confusing and leaky:
   others discovered missing during implementation).
 - `cloud_keys.json` is deleted. Its per-key linking/ownership layer is gone.
 
-## Per-Key Per-Key Access (replaces linking)
+## Per-Key Access (replaces linking)
 
 - Each Guardian API key (in `guardian_apikeys.yaml`) gets
   `cloud_gateway_access: true|false` (default `true`).
@@ -124,6 +124,11 @@ clients:
   a `{brand}` segment in their name, and (b) `/v1/models` stops listing
   duplicates and the `guardian/...` aliases. A migration script lists which
   client configs reference openai/google names.
+- **⚠️ Clients using bare openai/google names must update.** `openai/gpt-4o`
+  becomes `openai/openai/gpt-4o`; `gemini-3.5-flash` becomes
+  `google/google/gemini-3.5-flash`. Affected clients: anything calling a model
+  without the `{brand}` segment on the openai or google provider. Run the
+  migration script to find all occurrences before restart.
 
 ## What Is Removed
 
