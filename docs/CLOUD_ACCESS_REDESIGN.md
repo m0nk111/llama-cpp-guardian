@@ -23,8 +23,8 @@ The current cloud-access layer grew organically and is confusing and leaky:
    `minimaxai/minimax-m3`) but openai/google store them without (bare `gpt-4o`,
    bare `gemini-3.5-flash`) → `openai/gpt-4o` (2 segments) vs
    `nvidia/minimaxai/minimax-m3` (3). The `{brand}` layer should always be
-   present — so the target format is `google/gemini-3.5-flash` /
-   `google/google/gemini-3.5-flash`, never the bare `gemini-3.5-flash`.
+   present — so the target format is always `google/google/gemini-3.5-flash`,
+   never the bare `gemini-3.5-flash` or the 2-segment `google/gemini-3.5-flash`.
 4. **The credential-linking layer is not a security boundary.** A Guardian
    API key with *no* linked credential can still call any bare cloud model from
    `settings.yaml` using the global provider key (`resolve_cloud_attempts` only
@@ -119,8 +119,8 @@ actually in use**:
   send does not change.
 - **Google models are always written with the `google` brand.** Because google
   becomes a first-class provider, gemini models are consistently
-  `google/gemini-3.5-flash` → `google/google/gemini-3.5-flash` (never a bare
-  `gemini-3.5-flash`).
+  `google/google/gemini-3.5-flash` (never the bare `gemini-3.5-flash` or the
+  2-segment `google/gemini-3.5-flash`).
 - **Local:** models keep their bare name (`llama3.2-3b`) — unchanged.
 
 If a client sends a name that no longer matches after the redesign, it is a
