@@ -130,7 +130,7 @@ def resolve_cloud_attempts(
             raise HTTPException(
                 status_code=403,
                 detail={
-                    "error": "cloud_credential_not_linked",
+                    "error": "cloud_provider_unavailable",
                     "reason": "no_provider_for_failover_group",
                     "message": (
                         f"No configured cloud provider is available for failover "

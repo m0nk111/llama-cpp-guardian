@@ -6,7 +6,6 @@ import time
 import logging
 import re
 import subprocess
-from pathlib import Path
 from typing import Any, Dict, Optional
 import yaml
 from fastapi import HTTPException, Security, Request
