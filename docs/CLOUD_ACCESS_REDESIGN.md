@@ -18,12 +18,12 @@ The current cloud-access layer grew organically and is confusing and leaky:
    `guardian/{provider}/{model}` routes. Same model shows up 3–4 times
    (`openai/gpt-4o` → `openai/gpt-4o`, `openrouter/openai/gpt-4o`,
    `guardian/openrouter/openai/gpt-4o`, `guardian/openai/gpt-4o`).
-3. **The `guardian/{provider}/{model}` route is inconsistent** across
-   providers: openrouter/nvidia store their models with the brand segment
-   (`openai/gpt-4o`, `minimaxai/minimax-m3`) but openai/google store them
-   without (`gpt-4o`, `gemini-3.5-flash`) → `guardian/openai/gpt-4o` (3
-   segments) vs `guardian/nvidia/minimaxai/minimax-m3` (4). The `{brand}` layer
-   should always be present.
+3. **The cloud model name is inconsistent** across providers: openrouter/nvidia
+   store their models with the brand segment (`openai/gpt-4o`,
+   `minimaxai/minimax-m3`) but openai/google store them without (`gpt-4o`,
+   `gemini-3.5-flash`) → `openai/gpt-4o` (2 segments) vs
+   `nvidia/minimaxai/minimax-m3` (3). The `{brand}` layer should always be
+   present.
 4. **The credential-linking layer is not a security boundary.** A Guardian
    API key with *no* linked credential can still call any bare cloud model from
    `settings.yaml` using the global provider key (`resolve_cloud_attempts` only
@@ -41,7 +41,9 @@ The current cloud-access layer grew organically and is confusing and leaky:
 - **Dynamic cloud model catalog** (fetched from each provider's own
   `/v1/models`, cached + auto-refresh) instead of hand-maintaining a list.
 - **A single, consistent model-addressing format**:
-  `guardian/{provider}/{brand}/{model}` (cloud) and `guardian/{local}` (local).
+  `{provider}/{brand}/{model}` (cloud) and `{local}` (local). Note: no
+  `guardian/` prefix — it was only namespace-for-clarity, and dropping it means
+  existing bare-name clients keep working unchanged (see Backward compatibility).
 - **Google added as a first-class provider** (currently absent from
   `settings.yaml`, only a brand under openrouter).
 
@@ -79,7 +81,7 @@ New module `app/proxy/cloud_catalog.py`:
 - For each configured provider (openrouter, nvidia, openai, poolside, **google**):
   - Fetch its OpenAI-compatible `/v1/models` using the settings provider key.
   - Normalize each model id to `{brand}/{model}` so the
-    `guardian/{provider}/{brand}/{model}` route is consistent for every provider.
+    `{provider}/{brand}/{model}` route is consistent for every provider.
   - Cache the result with a TTL + **auto-refresh** (background). On refresh
     failure, keep the last successful list (like today's google fallback).
 - `config/cloud_models.yaml` supplies per-model **overrides** (e.g. context
@@ -88,23 +90,40 @@ New module `app/proxy/cloud_catalog.py`:
 
 ## Model Addressing (the norm)
 
+> The `guardian/` prefix is dropped. It was only there for namespace clarity,
+> and removing it keeps every existing bare-name client working (they already
+> address cloud models as `openrouter/deepseek/deepseek-v4-flash-0731`, etc.).
+> Cloud model access is gated by the per-key `cloud_gateway_access` boolean —
+> not by the address — so the prefix provides no security.
+
 | Model class | Format | Example |
 |---|---|---|
-| Cloud | `guardian/{provider}/{brand}/{model}` | `guardian/google/google/gemini-3.5-flash`, `guardian/openrouter/openai/gpt-4o`, `guardian/openai/openai/gpt-4o`, `guardian/nvidia/minimaxai/minimax-m3` |
-| Local | `guardian/{local}` (new primary) | `guardian/llama3.2-3b` |
+| Cloud | `{provider}/{brand}/{model}` | `google/google/gemini-3.5-flash`, `openrouter/openai/gpt-4o`, `openai/openai/gpt-4o`, `nvidia/minimaxai/minimax-m3` |
+| Local | `{local}` | `llama3.2-3b` |
 
 - **Provider** = who serves the API (`openrouter`, `nvidia`, `openai`, `google`, …).
 - **Brand** = the model's actual maker namespace (`openai`, `google`, `minimaxai`, …).
-- Provider and brand are independent and may coincide (`guardian/google/google/…`,
-  `guardian/openai/openai/…`).
+- Provider and brand are independent and may coincide (`google/google/…`,
+  `openai/openai/…`).
 
-### Backward compatibility (operator decision)
+### Backward compatibility (operator decision, revised after review)
 
-- **Cloud:** strict new format only. Bare cloud names (`openai/gpt-4o`,
-  `moonshotai/kimi-k3`) are **removed** from the listing and no longer accepted
-  as router inputs. Clients must use `guardian/{provider}/{brand}/{model}`.
-- **Local:** `guardian/{local}` is the new primary, but the old bare name
-  (`llama3.2-3b`) stays accepted as an alias so existing local clients don't break.
+This addressing is **fully backward-compatible** — it does not break existing
+clients:
+
+- **Cloud:** the format `{provider}/{brand}/{model}` is exactly the bare name
+  clients already send today (`openrouter/deepseek/deepseek-v4-flash-0731`,
+  `nvidia/minimaxai/minimax-m3`). The change is purely *consistency*: every
+  provider now exposes the `{brand}` segment (openai/google previously omitted
+  it) and `/v1/models` deduplicates. No `guardian/` prefix is introduced or
+  required. The legacy per-key `guardian/{provider}/{model}` routes are removed
+  along with the credential layer, but the *address* clients use does not
+  change.
+- **Local:** models keep their bare name (`llama3.2-3b`) — unchanged.
+- The only real behavioral deltas for clients are: (a) openai/google models get
+  a `{brand}` segment in their name, and (b) `/v1/models` stops listing
+  duplicates and the `guardian/...` aliases. A migration script lists which
+  client configs reference openai/google names.
 
 ## What Is Removed
 
@@ -144,7 +163,8 @@ New module `app/proxy/cloud_catalog.py`:
 2. **`cloud_catalog.py`** (new module): fetch/cache/auto-refresh, brand
    normalization, `cloud_models.yaml` overrides.
 3. **Routing ombouw**: replace `get_credential_for_key` with settings-key +
-   `cloud_gateway_access` gate; strict cloud format; local `guardian/{local}`.
+   `cloud_gateway_access` gate; consistent `{provider}/{brand}/{model}` cloud
+   format; local bare names unchanged.
 4. **model_discovery/admin/UI opschoning**: unified listing, drop credential
    CRUD, add catalog refresh.
 5. **Tests**: drop the two old cloud_keys suites, add catalog + gating tests.

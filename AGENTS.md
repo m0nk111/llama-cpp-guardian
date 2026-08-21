@@ -94,7 +94,7 @@ scripts/
 When touching these areas, read the referenced detail docs:
 
 - **Cloud routing / model resolution** → `@docs/LLM_ROUTER.md`
-- **Cloud access redesign plan** → `@docs/CLOUD_ACCESS_REDESIGN.md` (PLAN: one config, one key source, dynamic catalog, unified `guardian/{provider}/{brand}/{model}` format — not yet implemented)
+- **Cloud access redesign plan** → `@docs/CLOUD_ACCESS_REDESIGN.md` (PLAN: one config, one key source, dynamic catalog, consistent `{provider}/{brand}/{model}` cloud format — `guardian/` prefix dropped so bare-name clients keep working)
 - **Anthropic API bridge** → `@docs/ANTHROPIC_BRIDGE.md`
 - **System architecture** → `@docs/ARCHITECTURE.md`
 - **API surface** → `@docs/API_REFERENCE.md`
@@ -271,9 +271,16 @@ When touching these areas, read the referenced detail docs:
     true|false` (default true) in `guardian_apikeys.yaml`.
   - Dynamic cloud catalog (`cloud_catalog.py`): fetch each provider's `/v1/models`,
     cache + auto-refresh; `cloud_models.yaml` = per-model overrides only.
-  - Model format: cloud `guardian/{provider}/{brand}/{model}` (strict-new, bare
-    names removed); local `guardian/{local}` (new primary, old bare name stays
-    accepted as alias). Example: `guardian/google/google/gemini-3.5-flash`.
+  - Model format: cloud `{provider}/{brand}/{model}` — `guardian/` prefix
+    **dropped** (2026-08-21, after copilot review #7 point 1) so existing
+    bare-name clients keep working; only the `{brand}` segment is the real
+    change (openai/google previously omitted it). Local keeps its bare name.
+    Example: `google/google/gemini-3.5-flash`, `openrouter/deepseek/deepseek-v4-flash-0731`.
+- **Reviewer (copilot-swe-agent) notes on PR #7:** (1) no breaking change for
+  bare-name clients (addressed by dropping `guardian/`), (2) cold-start fallback
+  catalog needed if first catalog fetch fails, (3) `cloud_models.yaml` scope
+  example, (4) verify poolside `/v1/models` works before depending on it,
+  (5) check capture attribution still works after credential removal.
 - **Reference for implementation** so the next session does not re-derive it:
   read `docs/CLOUD_ACCESS_REDESIGN.md` and the skills pointer already added.
 - **NOT started.** Implementation awaits operator go-ahead (it ends in a
