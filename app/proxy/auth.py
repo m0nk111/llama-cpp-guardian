@@ -150,6 +150,7 @@ def _build_auth_context(
         "project_prefix": project_prefix,
         "key_prefix": _token_prefix(token) if token else None,
         "key_fingerprint": _token_fingerprint(token) if token else None,
+        "cloud_gateway_access": bool((user_data or {}).get("cloud_gateway_access", True)),
         "header_name": header_name,
         "source_ip": source_ip,
         "source_port": source_port,
