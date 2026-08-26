@@ -19,3 +19,8 @@ def parse_port(raw: str, default: int = 8080) -> int:
         return default
     except Exception:  # noqa: BLE001 - bewust breed: alle fouten -> default
         return default
+
+
+def is_loopback(host: str) -> bool:
+    """True voor loopback-hosts (localhost, 127.0.0.1, ::1)."""
+    return host in {"localhost", "127.0.0.1", "::1"} or host.startswith("127.")
